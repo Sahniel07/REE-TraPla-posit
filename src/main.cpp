@@ -3,7 +3,7 @@
 #include <vector>
 #include <chrono> 
 #include "dynamic_game_planner.h"
-#include "recorder.h"
+//#include "recorder.h"
 
 #if (REAL_BITS == 16) && !(ARCH_AARCH64)
 #error "REAL_BITS=16 requires ENABLE_AARCH64=ON, cant compile 16 Bit for X86!"
@@ -13,6 +13,13 @@
     std::string quantization_status = "_withQuanti";
 #else
     std::string quantization_status = "_withoutQuanti";
+#endif
+
+//Enabling posit csv output
+#if (ENABLE_POSIT == 1)
+    std::string posit_status = "_posit";
+#else
+    std::string posit_status = "";
 #endif
 
 void save_lanes_to_csv(const std::vector<VehicleState>& traffic, const std::string& filename) {
@@ -147,9 +154,8 @@ int main() {
     traffic_intersection = planner_intersection.traffic;
 
     // Save trajectories to a CSV file
-    std::string output_filename = "trajectories_intersection_" + std::to_string(REAL_BITS) + quantization_status + ".csv";
+    std::string output_filename = "trajectories_intersection_" + std::to_string(REAL_BITS) + quantization_status + posit_status + ".csv";
     save_trajectories_to_csv(traffic_intersection, output_filename);
-    save_lanes_to_csv(traffic_intersection, "lanes_intersection_" + std::to_string(REAL_BITS) + quantization_status + ".csv");
-    
+    save_lanes_to_csv(traffic_intersection, "lanes_intersection_" + std::to_string(REAL_BITS) + quantization_status + posit_status + ".csv");
     return 0;
 }

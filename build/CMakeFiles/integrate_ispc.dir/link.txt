@@ -1,0 +1,2 @@
+/usr/bin/ar qc libintegrate_ispc.a integrate_ispc.o
+/usr/bin/ranlib libintegrate_ispc.a

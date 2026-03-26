@@ -1,5 +1,5 @@
 #include "dynamic_game_planner.h"
-#include "recorder.h"
+//#include "recorder.h"
 // #include "update_trajetcory_interface.h"
 #include "integrate_ispc.h"
 #include "ispc_parameter.h"
@@ -126,65 +126,131 @@ void DynamicGamePlanner::initial_guess(SoA_X_Double& X_, SoA_U_Double& U_)
 }
 /** integrates the input U to get the state X */
 void DynamicGamePlanner::integrate(SoA_X* X_, const SoA_U* U_)
-{
-    int index;
-    int ind;
-    typeInC v_ref;
-    typeInC t;
-    typeInC s_t0[param.nX];
-    typeInC u_t0[param.nU];
-    typeInC ds_t0[param.nX];
+{   
+    #if ENABLE_POSIT == 1
 
-    for (int i = 0; i < M; i++){
-        ind = 0;
-        t = 0.0;
+        int index;
+        int ind;
+        posit32 v_ref;
+        posit32 t;
+        posit32 s_t0[param.nX];
+        posit32 u_t0[param.nU];
+        posit32 ds_t0[param.nX];
 
-        // Initial state:
-        s_t0[x] = traffic[i].x;
-        s_t0[y] = traffic[i].y;
-        s_t0[v] = traffic[i].v;
-        s_t0[psi] = traffic[i].psi;
-        s_t0[s] = 0.0;
-        s_t0[l] = 0.0;
+        for (int i = 0; i < M; i++){
+            ind = 0;
+            t = 0.0;
 
-        for (int j = 0; j < param.N + 1; j++){
-            index = MAX_OBSTACLES * j +  i;
-            v_ref = traffic[i].v_target;
+            // Initial state:
+            s_t0[x] = traffic[i].x;
+            s_t0[y] = traffic[i].y;
+            s_t0[v] = traffic[i].v;
+            s_t0[psi] = traffic[i].psi;
+            s_t0[s] = 0.0;
+            s_t0[l] = 0.0;
 
-            u_t0[d] = U_->d[index];
-            u_t0[F] = U_->F[index];
+            for (int j = 0; j < param.N + 1; j++){
+                index = MAX_OBSTACLES * j +  i;
+                v_ref = traffic[i].v_target;
 
-            // Derivatives: 
-            typeInC angle_1 = param.cg_ratio * u_t0[d];
-            typeInC angle = s_t0[psi] + angle_1;
-            ds_t0[x] = s_t0[v] * cos(angle);
-            ds_t0[y] = s_t0[v] * sin(angle);
-            ds_t0[v] = (-1.0/param.tau) * s_t0[v] + (param.k) * u_t0[F];
-            ds_t0[psi] = s_t0[v] * tan(u_t0[d]) * cos(angle_1)/ param.length;
-            ds_t0[l] = param.weight_target_speed * (s_t0[v] - v_ref) * (s_t0[v] - v_ref);
-            ds_t0[s] = s_t0[v];
+                u_t0[d] = U_->d[index];
+                u_t0[F] = U_->F[index];
 
-            // Integration to compute the new state: 
-            s_t0[x] += param.dt * ds_t0[x];
-            s_t0[y] += param.dt * ds_t0[y];
-            s_t0[v] += param.dt * ds_t0[v];
-            s_t0[psi] += param.dt * ds_t0[psi];
-            s_t0[s] += param.dt * ds_t0[s];
-            s_t0[l] += param.dt * ds_t0[l];
+                // Derivatives: 
+                posit32 angle_1 = posit32(param.cg_ratio) * u_t0[d];
+                posit32 angle = s_t0[psi] + angle_1;
+                ds_t0[x] = s_t0[v] * sw::universal::cos(angle);
+                ds_t0[y] = s_t0[v] * sw::universal::sin(angle);
+                ds_t0[v] = (posit32(-1.0)/posit32(param.tau) * s_t0[v] + (posit32(param.k) * u_t0[F]));
+                ds_t0[psi] = s_t0[v] * sw::universal::tan(u_t0[d]) * sw::universal::cos(angle_1)/ posit32(param.length);
+                ds_t0[l] = posit32(param.weight_target_speed) * (s_t0[v] - v_ref) * (s_t0[v] - v_ref);
+                ds_t0[s] = s_t0[v];
 
-            if (s_t0[v] < 0.0){s_t0[v] = 0.0;}
+                // Integration to compute the new state: 
+                s_t0[x] += posit32(param.dt) * ds_t0[x];
+                s_t0[y] += posit32(param.dt) * ds_t0[y];
+                s_t0[v] += posit32(param.dt) * ds_t0[v];
+                s_t0[psi] += posit32(param.dt) * ds_t0[psi];
+                s_t0[s] += posit32(param.dt) * ds_t0[s];
+                s_t0[l] += posit32(param.dt) * ds_t0[l];
 
-            // Save the state in the trajectory
-            X_->x[index] = s_t0[x];
-            X_->y[index] = s_t0[y];
-            X_->v[index] = s_t0[v];
-            X_->psi[index] = s_t0[psi];
-            X_->s[index] = s_t0[s];
-            X_->l[index] = s_t0[l];
-            t+= param.dt;    
+                if (s_t0[v] < 0.0){s_t0[v] = 0.0;}
+
+                // Save the state in the trajectory (translated back to standard C++)
+                X_->x[index] = (typeInC)double(s_t0[x]);
+                X_->y[index] = (typeInC)double(s_t0[y]);
+                X_->v[index] = (typeInC)double(s_t0[v]);
+                X_->psi[index] = (typeInC)double(s_t0[psi]);
+                X_->s[index] = (typeInC)double(s_t0[s]);
+                X_->l[index] = (typeInC)double(s_t0[l]);
+                t += posit32(param.dt);  
+            }
         }
-    }
+
+    #else
+        
+        int index;
+        int ind;
+        typeInC v_ref;
+        typeInC t;
+        typeInC s_t0[param.nX];
+        typeInC u_t0[param.nU];
+        typeInC ds_t0[param.nX];
+
+        for (int i = 0; i < M; i++){
+            ind = 0;
+            t = 0.0;
+
+            // Initial state:
+            s_t0[x] = traffic[i].x;
+            s_t0[y] = traffic[i].y;
+            s_t0[v] = traffic[i].v;
+            s_t0[psi] = traffic[i].psi;
+            s_t0[s] = 0.0;
+            s_t0[l] = 0.0;
+
+            for (int j = 0; j < param.N + 1; j++){
+                index = MAX_OBSTACLES * j +  i;
+                v_ref = traffic[i].v_target;
+
+                u_t0[d] = U_->d[index];
+                u_t0[F] = U_->F[index];
+
+                // Derivatives: 
+                typeInC angle_1 = param.cg_ratio * u_t0[d];
+                typeInC angle = s_t0[psi] + angle_1;
+                ds_t0[x] = s_t0[v] * cos(angle);
+                ds_t0[y] = s_t0[v] * sin(angle);
+                ds_t0[v] = (-1.0/param.tau) * s_t0[v] + (param.k) * u_t0[F];
+                ds_t0[psi] = s_t0[v] * tan(u_t0[d]) * cos(angle_1)/ param.length;
+                ds_t0[l] = param.weight_target_speed * (s_t0[v] - v_ref) * (s_t0[v] - v_ref);
+                ds_t0[s] = s_t0[v];
+
+                // Integration to compute the new state: 
+                s_t0[x] += param.dt * ds_t0[x];
+                s_t0[y] += param.dt * ds_t0[y];
+                s_t0[v] += param.dt * ds_t0[v];
+                s_t0[psi] += param.dt * ds_t0[psi];
+                s_t0[s] += param.dt * ds_t0[s];
+                s_t0[l] += param.dt * ds_t0[l];
+
+                if (s_t0[v] < 0.0){s_t0[v] = 0.0;}
+
+                // Save the state in the trajectory
+                X_->x[index] = s_t0[x];
+                X_->y[index] = s_t0[y];
+                X_->v[index] = s_t0[v];
+                X_->psi[index] = s_t0[psi];
+                X_->s[index] = s_t0[s];
+                X_->l[index] = s_t0[l];
+                t+= param.dt;    
+            }
+        }
+
+    #endif
 }
+
+
 
 /** SR1 Hessian matrix update*/
 void DynamicGamePlanner::hessian_SR1_update(Eigen::MatrixXd & H_, const Eigen::MatrixXd & s_, const Eigen::MatrixXd & y_, double r_)
@@ -936,8 +1002,12 @@ void DynamicGamePlanner::launch_integrate(SoA_X_Double* X_Double, const SoA_U_Do
     
     auto start = std::chrono::steady_clock::now();
     convertToISPC(U_Double, X_Double, &U_, &X_);
-    integrate_ispc(&X_, &U_, state_ispc, M);
-    // integrate(&X_, &U_); //this is the scalar version
+        
+    #if ENABLE_POSIT == 1
+        integrate(&X_, &U_);                        // Runs your Posit math!
+    #else
+        integrate_ispc(&X_, &U_, state_ispc, M);    // Runs the original fast ISPC vector math!
+    #endif
         
     #if ENABLE_QUANTIZATION == 1
     convertFromISPC(&X_, X_Double);

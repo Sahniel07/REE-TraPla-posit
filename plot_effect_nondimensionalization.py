@@ -23,8 +23,8 @@ mpl.rcParams.update({
     "legend.fontsize": S["footnotesize"],
     "pdf.fonttype": 42, "ps.fonttype": 42,        # keep text searchable
 })
-# Pick an available Times-like font so figures stay consistent on systems
-# without proprietary Times faces.
+
+# Pick an available Times-like font
 _FONT_CANDIDATES = [
     "Times New Roman",
     "Times",
@@ -32,7 +32,6 @@ _FONT_CANDIDATES = [
     "DejaVu Serif",
     "STIXGeneral",
 ]
-
 
 def _select_font_property():
     for family in _FONT_CANDIDATES:
@@ -44,20 +43,20 @@ def _select_font_property():
         return prop
     return font_manager.FontProperties(family="serif")
 
-
 _BASE_FONT = _select_font_property()
-
 
 def font_prop(size_key: str) -> font_manager.FontProperties:
     prop = _BASE_FONT.copy()
     prop.set_size(S[size_key])
     return prop
 # ==========================================
-CONFIGS = [
-    ("_32_withoutQuanti", "Without Nondimensionalization"),
-    ("_32_withQuanti", "With Nondimensionalization"),
-]
 
+# THIS IS THE KEY CHANGE: 
+# We compare the standard 32-bit IEEE Float vs the 32-bit Posit
+CONFIGS = [
+    ("_32_withoutQuanti", "IEEE Float (32-bit)"),
+    ("_32_withoutQuanti_posit", "Posit (32-bit)"),
+]
 
 def load_intersection_data(suffix: str) -> pd.DataFrame:
     """Return the intersection trajectory dataframe for the requested suffix."""
@@ -141,20 +140,24 @@ fig, axes = plt.subplots(
 axes = np.atleast_1d(axes).ravel()
 
 for idx, (ax, (suffix, title)) in enumerate(zip(axes, CONFIGS)):
-    df_intersection = load_intersection_data(suffix)
-    plot_trajectories(df_intersection, "Intersection", ax)
-    style_axes(
-        ax,
-        legend_title=None,
-        show_legend=False,
-        show_xlabel=False,
-        show_ylabel=False,
-        subplot_title=title,
-    )
-    ax.grid(True)
-    ax.set_aspect("equal", adjustable="box")  # Keep proportions realistic without conflicting with shared axes
-    if idx > 0:
-        ax.tick_params(labelleft=False)
+    try:
+        df_intersection = load_intersection_data(suffix)
+        plot_trajectories(df_intersection, "Intersection", ax)
+        style_axes(
+            ax,
+            legend_title=None,
+            show_legend=False,
+            show_xlabel=False,
+            show_ylabel=False,
+            subplot_title=title,
+        )
+        ax.grid(True)
+        ax.set_aspect("equal", adjustable="box")  # Keep proportions realistic without conflicting with shared axes
+        if idx > 0:
+            ax.tick_params(labelleft=False)
+    except FileNotFoundError:
+        print(f"Warning: Could not find the file for {suffix}. Make sure you run the C++ program with this configuration first!")
+        ax.set_title(f"{title}\n(File Not Found)")
 
 # Add shared axis labels
 fig.text(0.5, 0.02, "X Position [m]", fontproperties=font_prop("large"), ha="center")

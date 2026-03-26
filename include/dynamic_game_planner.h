@@ -10,7 +10,10 @@
 #include "utils.h"  // Utility functions
 #include "parameters.h"  // Parameters for the planner
 #include "integrate_ispc.h"
-#include "recorder.h"
+//#include "recorder.h"
+#include <universal/number/posit/posit.hpp>
+using posit32 = sw::universal::posit<32, 1>; // Defines a 32 bit posit with 1 regime bit, modify as needed
+
 
 #if ARCH_AARCH64
 #include <arm_fp16.h>
