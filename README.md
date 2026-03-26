@@ -1,4 +1,4 @@
-# REE-TraPla: Runtime- and Energie-Efficient Dynamic Game-Theoretic Trajectory Planner
+# REE-TraPla: Runtime- and Energie-Efficient Dynamic Game-Theoretic Trajectory Planner Posit implementation
 This repository uses 
 - **vectorization** to acclerate a [trajectory planner](https://github.com/giovannilucente/dynamic_game_trajectory_planner.git) based on **Generalized Nash Equilibrium (GNE)**. 
 - **nondimensionalization** to reduce the precision loss caused by reducing bit-width of data.
