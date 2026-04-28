@@ -29,7 +29,12 @@ git clone git@github.com:https:Sahniel07/REE-TraPla-posit.git
 cd .\REE-TraPla-posit
 
 ```
+Second, clone the Universal number library in the third party folder
 
+```bash
+cd .\REE-TraPla-posit\third_party\
+git clone https://github.com/stillwater-sc/universal.git
+```
 ### 2. Install C++ Dependencies
 ```bash
 sudo apt update
